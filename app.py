@@ -5,6 +5,7 @@ import folium
 import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_folium import st_folium
+import requests
 
 # ── ML Integration (Hour 12) ──────────────────────────────────────────────────
 try:
@@ -440,19 +441,48 @@ def build_map(df: pd.DataFrame) -> folium.Map:
 
 VAN_COLOURS = ["#1A73E8", "#9C27B0", "#E53935", "#2E7D32", "#F57C00"]
 
+# ── Copy-paste replacement for draw_route() in app.py ────────────────────────
+
+VAN_COLOURS = ["#1A73E8", "#9C27B0", "#E53935", "#2E7D32", "#F57C00"]
+
+def get_osrm_route(coords: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """
+    Takes a list of (lat, lon) waypoints and calls the free OSRM API
+    to get the actual road-snapped path.
+    """
+    # OSRM expects coordinates in lon,lat format separated by semicolons
+    coord_string = ";".join([f"{lon},{lat}" for lat, lon in coords])
+    url = f"http://router.project-osrm.org/route/v1/driving/{coord_string}?overview=full&geometries=geojson"
+    
+    try:
+        # Add a custom User-Agent so OSRM doesn't block the request
+        headers = {"User-Agent": "RuralHealthHackathonApp/1.0"}
+        resp = requests.get(url, headers=headers, timeout=5)
+        data = resp.json()
+        
+        if data.get("code") == "Ok":
+            # Extract the road geometry (OSRM returns [lon, lat])
+            route_coords = data["routes"][0]["geometry"]["coordinates"]
+            # Convert back to [lat, lon] for Folium
+            return [(lat, lon) for lon, lat in route_coords]
+    except Exception as e:
+        print(f"OSRM API failed: {e}")
+        
+    # Hackathon Fallback: If Wi-Fi fails, return the straight lines
+    return coords
+
+
 def draw_route(result: dict, folium_map: folium.Map, df: pd.DataFrame, depot_id: str = "V01"):
     """
-    Draws multi-van routes on the existing Folium map without erasing hotspots.
+    Draws multi-van routes snapped to real roads using OSRM.
     """
     route_ids = result.get("route_ids", {})
     
-    # Backwards compatibility: if solver returns a single list instead of a dict
     if isinstance(route_ids, list):
         if not route_ids:
             return
         route_ids = {"Medical_Van_1": route_ids}
 
-    # Build lat/lon lookup
     coord_map = {
         row["Village_ID"]: (float(row["Latitude"]), float(row["Longitude"]))
         for _, row in df.iterrows()
@@ -462,21 +492,25 @@ def draw_route(result: dict, folium_map: folium.Map, df: pd.DataFrame, depot_id:
     for van_idx, (van_name, village_sequence) in enumerate(route_ids.items()):
         colour = VAN_COLOURS[van_idx % len(VAN_COLOURS)]
 
-        coords = [coord_map[vid] for vid in village_sequence if vid in coord_map]
+        # Get the straight-line waypoints
+        waypoints = [coord_map[vid] for vid in village_sequence if vid in coord_map]
 
-        if len(coords) < 2:
-            continue  # nothing to draw
+        if len(waypoints) < 2:
+            continue
 
-        # Route polyline
+        # 🚨 THE MAGIC TRICK: Fetch the real road path from OSRM
+        road_path = get_osrm_route(waypoints)
+
+        # Draw the real road polyline
         folium.PolyLine(
-            locations=coords,
+            locations=road_path,
             color=colour,
             weight=5,
             opacity=0.9,
-            tooltip=f"<b>{van_name}</b>",
+            tooltip=f"<b>{van_name}</b> (Road-Snapped)",
         ).add_to(folium_map)
 
-    # ── Legend (simple HTML overlay) ─────────────────────────────────────────
+    # ── Legend HTML ──────────────────────────────────────────────────────────
     if route_ids:
         legend_items = "".join(
             f'<li><span style="background:{VAN_COLOURS[i % len(VAN_COLOURS)]}; '
@@ -493,8 +527,6 @@ def draw_route(result: dict, folium_map: folium.Map, df: pd.DataFrame, depot_id:
         </div>
         """
         folium_map.get_root().html.add_child(folium.Element(legend_html))
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # PLOTLY CHARTS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -613,7 +645,7 @@ def run_solver(matrix_path, outbreak_path, max_time_mins):
 
         # 4. Run the multi-van fleet solver
         result = solve_routing(data=data, fleet_size=2, max_time=max_time_mins)
-        
+
         # 5. Format the output so the UI KPI cards don't crash
         if result.get("status") == "SUCCESS":
             # Extract all unique villages visited across all vans
