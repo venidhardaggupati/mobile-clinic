@@ -7,8 +7,4 @@ plotly
 ortools
 scikit-learn
 joblib
-<<<<<<< HEAD
 requests
-=======
-requests
->>>>>>> d994d7dd9a2205ca0ebbbe27eb029ea8af82d7be
