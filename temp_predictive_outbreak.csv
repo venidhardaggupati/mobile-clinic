@@ -1,0 +1,21 @@
+Village_ID,Disease_Type,Active_Cases,Severity_Score
+V01,None,0,10.0
+V02,Dengue,43,10.0
+V03,Malaria,46,10.0
+V04,Cholera,67,10.0
+V05,Cholera,32,10.0
+V06,None,96,10.0
+V07,Seasonal Flu,120,10.0
+V08,None,25,10.0
+V09,None,85,10.0
+V10,Cholera,50,10.0
+V11,Seasonal Flu,65,10.0
+V12,None,107,10.0
+V13,Malaria,74,10.0
+V14,None,57,10.0
+V15,Seasonal Flu,20,10.0
+V16,None,54,10.0
+V17,Malaria,80,10.0
+V18,Cholera,74,10.0
+V19,Malaria,63,10.0
+V20,Seasonal Flu,68,10.0

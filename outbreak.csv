@@ -1,0 +1,14 @@
+Outbreak_ID,Village_ID,Disease_Type,Disease_Weight,Active_Cases,Severity_Score
+OB01,V02,Dengue,7,47,10.0
+OB02,V07,Seasonal Flu,2,139,4.64
+OB03,V13,Malaria,6,30,4.86
+OB04,V03,Malaria,6,67,10.0
+OB05,V10,Cholera,9,31,10.0
+OB06,V18,Cholera,9,98,10.0
+OB07,V05,Cholera,9,58,10.0
+OB08,V15,Seasonal Flu,2,68,10.0
+OB09,V17,Malaria,6,24,3.6
+OB10,V19,Malaria,6,60,10.0
+OB11,V04,Cholera,9,117,10.0
+OB12,V11,Seasonal Flu,2,64,3.96
+OB13,V20,Seasonal Flu,2,73,4.28
